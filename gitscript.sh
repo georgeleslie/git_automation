@@ -1,38 +1,49 @@
 #!/bin/bash
 
-# Check if a commit message was passed as an argument
+# Check if the user provided a repository name
 if [ -z "$1" ]; then
-  echo "Error: No commit message provided"
-  echo "Usage: ./git_auto_commit.sh 'Your commit message'"
+  echo "Error: No repository name provided."
+  echo "Usage: ./newrepo.sh <repository-name> [commit-message] [description]"
   exit 1
 fi
 
-# Check the current branch
-current_branch=$(git branch --show-current)
-if [ -z "$current_branch" ]; then
-  echo "Error: Unable to determine current branch. Are you inside a Git repository?"
+# Variables
+REPO_NAME=$1
+COMMIT_MESSAGE=${2:-"Initial commit"}  # Default commit message if none provided
+DESCRIPTION=${3:-"Repository created via script"}  # Default description if none provided
+
+# Check if GitHub CLI is installed
+if ! command -v gh &> /dev/null; then
+  echo "Error: GitHub CLI (gh) is not installed."
+  echo "Please install GitHub CLI by following the instructions here: https://cli.github.com/"
   exit 1
 fi
-echo "Current branch: $current_branch"
 
-# Add all changes
+echo "GitHub CLI is installed."
+
+# Create the GitHub repository using the GitHub CLI with a README and description
+echo "Creating a new GitHub repository named '$REPO_NAME'..."
+gh repo create "$REPO_NAME" --public --source=. --remote=origin --description "$DESCRIPTION" --readme
+if [ $? -ne 0 ]; then
+  echo "Error: Failed to create GitHub repository."
+  exit 1
+fi
+
+echo "GitHub repository '$REPO_NAME' created successfully with a README."
+
+# Initialize Git repository if it's not already initialized
+if [ ! -d .git ]; then
+  git init
+  echo "Initialized empty Git repository."
+fi
+
+# Add all files to staging
 git add .
 
-# Check Git status
-git_status=$(git status --short)
-if [ -z "$git_status" ]; then
-  echo "No changes to commit."
-  exit 0
-else
-  echo "Changes to commit:"
-  echo "$git_status"
-fi
+# Commit changes
+git commit -m "$COMMIT_MESSAGE"
 
-# Commit with the provided message
-git commit -m "$1"
+# Push to the GitHub repository
+git push -u origin main
 
-# Push to the current branch
-git push origin "$current_branch"
-
-echo "Changes committed and pushed to branch $current_branch"
-
+echo "All changes committed and pushed to the GitHub repository '$REPO_NAME'."
