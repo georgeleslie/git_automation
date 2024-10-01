@@ -1,1 +1,2 @@
 This file has been pushed to github via script! I love automation!
+created script
